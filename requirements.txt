@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+openrouteservice
+python-dotenv
+motor
+redis
+pydantic
+httpx
+geopy
