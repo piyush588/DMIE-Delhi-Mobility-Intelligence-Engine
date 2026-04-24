@@ -1,5 +1,6 @@
 from datetime import datetime
 from typing import List, Dict
+import pytz
 
 class ScoringEngine:
     def __init__(self):
@@ -19,6 +20,13 @@ class ScoringEngine:
         }
 
     def get_traffic_level(self, time_obj: datetime) -> str:
+        # Localize to IST
+        ist = pytz.timezone('Asia/Kolkata')
+        if time_obj.tzinfo is None:
+            time_obj = ist.localize(time_obj)
+        else:
+            time_obj = time_obj.astimezone(ist)
+            
         hour = time_obj.hour
         # Peak Hours: 8-11 AM and 5-9 PM (17-21)
         if 8 <= hour <= 11 or 17 <= hour <= 21:
@@ -30,6 +38,13 @@ class ScoringEngine:
         Calculates a score using the improved formula:
         score = (base_score + bonus - penalty) * reliability
         """
+        # Localize to IST for heuristics
+        ist = pytz.timezone('Asia/Kolkata')
+        if time_obj.tzinfo is None:
+            time_obj = ist.localize(time_obj)
+        else:
+            time_obj = time_obj.astimezone(ist)
+            
         mode = mode_data.get("mode", "").lower()
         weights = self.mode_weights.get(mode, self.default_weights)
         
@@ -54,13 +69,13 @@ class ScoringEngine:
             penalty += 0.3
 
         # Short distance convenience bonus for Autos (the "Delhi Favorite" for <3km)
-        # Note: We'll use distance_km from mode_data if available
         dist = mode_data.get("distance_km", 0)
         if mode == "auto" and 0.5 <= dist <= 3.0:
             bonus += 0.2
-
+        
         # Late Night Adjustments (22:00 - 05:00)
-        is_late_night = time_obj.hour >= 22 or time_obj.hour <= 5
+        hour = time_obj.hour
+        is_late_night = hour >= 22 or hour <= 5
         if is_late_night:
             if mode in ["cab", "auto"]:
                 bonus += 0.4 # Significant preference at night
