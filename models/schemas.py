@@ -7,10 +7,20 @@ class RouteRequest(BaseModel):
     dest: Tuple[float, float] = Field(..., description="[lat, lon] of destination")
     time: Optional[datetime] = Field(default_factory=datetime.now)
 
+class RouteSegment(BaseModel):
+    mode: str
+    from_loc: str
+    to_loc: str
+    distance_km: float
+    duration_min: float
+    cost: float
+
 class RouteOption(BaseModel):
     mode: str
-    time: float = Field(..., description="Time in minutes")
-    cost: float = Field(..., description="Cost in INR")
+    is_multimodal: bool = False
+    segments: List[RouteSegment] = []
+    time: float = Field(..., description="Total time in minutes")
+    cost: float = Field(..., description="Total cost in INR")
     score: float
     confidence: float = 0.8
     distance_km: float

@@ -1,4 +1,4 @@
-# 🧠 Delhi Mobility Intelligence Engine (DMIE)
+# Delhi Mobility Intelligence Engine (DMIE)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
@@ -8,17 +8,17 @@
 
 ---
 
-## 🚀 Key Features (V1)
+## Key Features (V2 - Multi-modal Upgrade)
 
-- **Route Mode Comparison**: Compare Cab, Auto, Metro, and Walking in a single call.
+- **Smart Multi-modal Routing**: Automatically combines different modes (e.g., Auto -> Metro -> Auto) to find the absolute best way through NCR.
+- **Dynamic Last-Mile Intelligence**: Calculates "hub" proximity and automatically links source/destination to the nearest metro stations.
+- **Route Mode Comparison**: Compare Cab, Auto, Metro (multimodal), and Walking in a single call.
 - **Peak Hour Intelligence**: Automatic traffic penalty/bonus applying during Delhi's rush hours (8-11 AM, 5-9 PM).
-- **Metro Proximity Detection**: Integrated database of 200+ Delhi Metro stations with automatic "last-mile" feasibility scoring.
 - **Weighted Scoring Engine**: A flexible algorithm that balances **Time, Cost, Comfort, and Reliability**.
-- **Mock Mode**: Functional out-of-the-box using distance heuristics even without external API keys.
 
 ---
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 - **Backend**: Python + FastAPI
 - **Routing**: [OpenRouteService](https://openrouteservice.org/) integration
@@ -27,7 +27,7 @@
 
 ---
 
-## 🚦 Quick Start
+## Quick Start
 
 ### 1. Clone & Install
 ```bash
@@ -48,20 +48,41 @@ cp .env.example .env
 python main.py
 ```
 
-### 4. Test it
+### 4. Test it (V2 Example)
 ```bash
 curl -X POST "http://localhost:8000/api/v1/recommend" \
      -H "Content-Type: application/json" \
      -d '{
-       "src": [28.6440, 77.1885],
-       "dest": [28.5279, 77.2056],
+       "src": [28.64, 77.24],
+       "dest": [28.45, 77.02],
        "time": "2026-04-24T18:00:00"
      }'
 ```
 
+### 5. API Response Structure
+The engine now returns a `segments` array for journey planning:
+```json
+{
+  "best_mode": "metro",
+  "confidence": 0.693,
+  "explanation": "Metro recommended due to heavy traffic and hub proximity.",
+  "options": [
+    {
+      "mode": "metro",
+      "is_multimodal": true,
+      "segments": [
+        { "mode": "auto", "from_loc": "Source", "to_loc": "Karol Bagh", "duration_min": 5.5 },
+        { "mode": "metro", "from_loc": "Karol Bagh", "to_loc": "HUDA City Centre", "duration_min": 45.0 },
+        { "mode": "auto", "from_loc": "HUDA City Centre", "to_loc": "Destination", "duration_min": 21.0 }
+      ]
+    }
+  ]
+}
+```
+
 ---
 
-## 💡 How it Works (Scoring Logic)
+## How it Works (Scoring Logic)
 
 DMIE calculates a **Mobility Score (0-1)** for every mode:
 ```python
@@ -72,19 +93,19 @@ score = (w_time * n_time) + (w_cost * n_cost) + (w_comfort * comfort) + (w_rel *
 
 ---
 
-## 🗺️ Roadmap
+## Roadmap
 
-- [ ] **V2**: Multi-modal routing (e.g., Metro + Auto combinations).
-- [ ] **V2**: Reliability indexing based on historic traffic trends.
-- [ ] **V2**: Live Weather integration (Rain -> Cab preference).
-- [ ] **V3**: Learning system to store and improve recommendations based on user choices.
+- [x] **V2**: Multi-modal routing (e.g., Metro + Auto combinations).
+- [ ] **V3**: Reliability indexing based on historic traffic trends.
+- [ ] **V3**: Live Weather integration (Rain -> Cab preference).
+- [ ] **V4**: Learning system to store and improve recommendations based on user choices.
 
 ---
 
-## 🤝 Contributing
+## Contributing
 
 Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for details.
 
-## 📄 License
+## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.

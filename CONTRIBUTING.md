@@ -2,7 +2,7 @@
 
 First off, thank you for considering contributing to the Delhi Mobility Intelligence Engine! It's people like you that make DMIE a great tool for the community.
 
-## 🌈 How Can I Contribute?
+## How Can I Contribute?
 
 ### Reporting Bugs
 - Use GitHub Issues to report bugs.
@@ -18,14 +18,14 @@ First off, thank you for considering contributing to the Delhi Mobility Intellig
 4. Push to the branch.
 5. Open a Pull Request.
 
-## 🏗️ Development Setup
+## Development Setup
 
 1. Install dependencies: `pip install -r requirements.txt`.
 2. Run tests: `PYTHONPATH=. python tests/test_v1.py`.
 3. Use `black` or `autopep8` for formatting.
 
-## 📜 Code of Conduct
+## Code of Conduct
 Please be respectful and constructive in all interactions.
 
 ---
-*Built with ❤️ for Delhi.*
+*Built with  for Delhi.*
