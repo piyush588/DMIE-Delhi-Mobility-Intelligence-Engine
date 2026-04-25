@@ -1,6 +1,6 @@
 import json
 import math
-from typing import List, Dict, Optional
+from typing import Dict, Optional
 
 class MetroService:
     def __init__(self, data_path: str = "data/metro.json"):

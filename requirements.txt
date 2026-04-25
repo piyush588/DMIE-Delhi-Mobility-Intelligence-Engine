@@ -8,3 +8,6 @@ redis
 pydantic
 httpx
 geopy
+pytest
+pytest-asyncio
+ruff

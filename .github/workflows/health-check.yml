@@ -1,0 +1,50 @@
+name: API Health Monitor
+
+on:
+  schedule:
+    # Run every 6 hours
+    - cron: '0 */6 * * *'
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  health-check:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Check API Health
+      id: health
+      run: |
+        # Replace with your production URL
+        URL="https://dmie-api.railway.app/api/v1/health"
+        RESPONSE=$(curl -s -w "%{http_code}" $URL)
+        HTTP_STATUS=${RESPONSE: -3}
+        CONTENT=${RESPONSE:0:${#RESPONSE}-3}
+        
+        echo "status=$HTTP_STATUS" >> $GITHUB_OUTPUT
+        echo "content=$CONTENT" >> $GITHUB_OUTPUT
+        
+        if [ "$HTTP_STATUS" -ne 200 ]; then
+          echo "API is DOWN with status $HTTP_STATUS"
+          exit 1
+        fi
+        echo "API is healthy"
+
+    - name: Send Status Email
+      if: always()
+      uses: dawidd6/action-send-mail@v3
+      with:
+        server_address: smtp.gmail.com
+        server_port: 465
+        username: ${{ secrets.MAIL_USERNAME }}
+        password: ${{ secrets.MAIL_PASSWORD }}
+        subject: "DMIE API Health Report: ${{ steps.health.outputs.status == '200' && '✅ Healthy' || '❌ DOWN' }}"
+        to: ${{ secrets.REPORT_EMAIL }}
+        from: DMIE Health Monitor
+        body: |
+          API Health Report for Delhi Mobility Intelligence Engine
+          
+          Timestamp: ${{ github.event.repository.updated_at }}
+          Status Code: ${{ steps.health.outputs.status }}
+          Response: ${{ steps.health.outputs.content }}
+          
+          Workflow: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}

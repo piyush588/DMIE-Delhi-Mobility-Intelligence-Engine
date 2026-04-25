@@ -1,7 +1,6 @@
 import os
 import httpx
-import asyncio
-from typing import List, Dict, Tuple, Optional
+from typing import Dict, Tuple, Optional
 from dotenv import load_dotenv
 
 load_dotenv()

@@ -1,6 +1,5 @@
 import time
 import requests
-import random
 
 URL = "http://localhost:8000/api/v1/recommend"
 

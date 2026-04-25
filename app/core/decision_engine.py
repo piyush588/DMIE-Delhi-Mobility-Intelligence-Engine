@@ -1,7 +1,6 @@
 import asyncio
-import time
 from datetime import datetime
-from typing import List, Dict, Optional
+from typing import Dict, Optional
 from app.services.routing_service import RoutingService
 from app.services.metro_service import MetroService
 from app.core.scoring import ScoringEngine
@@ -23,9 +22,6 @@ class DecisionEngine:
         rough_dist = ((req.src[0]-req.dest[0])**2 + (req.src[1]-req.dest[1])**2)**0.5 * 111
 
         # 2. Tiered Routing Strategy
-        # Tier 1: Very Short Trips (< 3km) -> Use Heuristics to avoid network latency
-        # Tier 2: Longer Trips -> Use ORS API (Async + Concurrent)
-        
         if rough_dist < 3.0:
             # FAST PATH: Heuristic only
             road_stats = self.routing._mock_route(req.src, req.dest, "cab")
@@ -34,7 +30,7 @@ class DecisionEngine:
             # STANDARD PATH: Parallel Routing Calls
             routing_tasks = []
             routing_tasks.append(self.routing.get_route_stats(req.src, req.dest, "cab"))
-            if rough_dist <= 8.0: # Only check walking if it's somewhat feasible
+            if rough_dist <= 8.0:
                 routing_tasks.append(self.routing.get_route_stats(req.src, req.dest, "walk"))
                 
             routing_results = await asyncio.gather(*routing_tasks)
@@ -133,13 +129,8 @@ class DecisionEngine:
         l2_dist = d_metro["distance_m"] / 1000
         l2_time = (l2_dist / 15) * 60
         l2_cost = self.cab.get_auto_estimate(l2_dist, req.time)
-        
-        # Overhead: 5 mins if walking distance, 10 mins if auto is needed
-        overhead = 5.0
-        if l1_dist > 1.0 or l2_dist > 1.0:
-            overhead = 10.0
-            
-        total_time = l1_time + m_time + l2_time + overhead
+
+        total_time = l1_time + m_time + l2_time + 10
         total_cost = l1_cost + m_cost + l2_cost
         total_dist = l1_dist + m_dist + l2_dist
 
@@ -159,17 +150,26 @@ class DecisionEngine:
         }
 
     def _estimate_cost(self, dist_km: float, mode: str, time_obj: datetime) -> float:
-        if mode == "walk": return 0.0
+        if mode == "walk":
+            return 0.0
         if mode == "metro":
             is_sunday = time_obj.weekday() == 6
-            if dist_km <= 2: return 11.0
-            elif dist_km <= 5: return 11.0 if is_sunday else 21.0
-            elif dist_km <= 12: return 21.0 if is_sunday else 32.0
-            elif dist_km <= 21: return 32.0 if is_sunday else 43.0
-            elif dist_km <= 32: return 43.0 if is_sunday else 54.0
-            else: return 54.0 if is_sunday else 64.0
-        if mode == "cab": return max(50.0, dist_km * 25.0)
-        if mode == "auto": return max(30.0, dist_km * 15.0)
+            if dist_km <= 2:
+                return 11.0
+            elif dist_km <= 5:
+                return 11.0 if is_sunday else 21.0
+            elif dist_km <= 12:
+                return 21.0 if is_sunday else 32.0
+            elif dist_km <= 21:
+                return 32.0 if is_sunday else 43.0
+            elif dist_km <= 32:
+                return 43.0 if is_sunday else 54.0
+            else:
+                return 54.0 if is_sunday else 64.0
+        if mode == "cab":
+            return max(50.0, dist_km * 25.0)
+        if mode == "auto":
+            return max(30.0, dist_km * 15.0)
         return 0.0
 
     def _get_comfort_base(self, mode: str) -> float:
@@ -181,9 +181,10 @@ class DecisionEngine:
     def _generate_explanation(self, best, traffic, near_src) -> str:
         if best.mode == "metro":
             msg = "Metro recommended due to "
-            if traffic == "HIGH": msg += "heavy traffic and "
+            if traffic == "HIGH":
+                msg += "heavy traffic and "
             msg += f"proximity to {near_src['name']} station."
             return msg
         if traffic == "HIGH" and best.mode != "metro":
             return f"Despite high traffic, {best.mode} is the most balanced option for this distance."
-        return f"Optimal choice based on time and cost efficiency."
+        return "Optimal choice based on time and cost efficiency."
