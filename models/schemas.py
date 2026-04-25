@@ -14,6 +14,8 @@ class RouteSegment(BaseModel):
     distance_km: float
     duration_min: float
     cost: float
+    line: Optional[str] = None
+    color: Optional[str] = None
 
 class RouteOption(BaseModel):
     mode: str

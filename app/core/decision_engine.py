@@ -118,35 +118,76 @@ class DecisionEngine:
         if rough_dist < 2.5:
             return None
             
+        metro_route = self.metro.get_metro_route(s_metro["name"], d_metro["name"])
+        if not metro_route:
+            return None
+
+        # 1. Source to First Metro Station
         l1_dist = s_metro["distance_m"] / 1000
         l1_time = (l1_dist / 15) * 60
         l1_cost = self.cab.get_auto_estimate(l1_dist, req.time)
 
-        m_dist = ((s_metro["coords"][0]-d_metro["coords"][0])**2 + (s_metro["coords"][1]-d_metro["coords"][1])**2)**0.5 * 111
-        m_time = (m_dist / 35.0) * 60
-        m_cost = self._estimate_cost(m_dist, "metro", req.time)
+        segments = [
+            {"mode": "auto", "from_loc": "Source", "to_loc": s_metro["name"], "distance_km": round(l1_dist, 2), "duration_min": round(l1_time, 2), "cost": l1_cost}
+        ]
 
+        # 2. Metro Segments (with interchanges)
+        total_m_dist = 0
+        total_m_time = 0
+        total_m_cost = 0
+
+        for m_start, m_end, m_line in metro_route:
+            # Get coordinates for accurate distance
+            start_coords = self.metro.graph[m_start]["coords"]
+            end_coords = self.metro.graph[m_end]["coords"]
+            seg_dist = self.metro.haversine(start_coords[0], start_coords[1], end_coords[0], end_coords[1]) / 1000.0
+            
+            # Approximating curve overhead for metro line
+            seg_dist *= 1.2 
+            seg_time = (seg_dist / 35.0) * 60
+            seg_cost = self._estimate_cost(seg_dist, "metro", req.time)
+            
+            total_m_dist += seg_dist
+            total_m_time += seg_time
+            total_m_cost += seg_cost
+            
+            segments.append({
+                "mode": "metro",
+                "from_loc": m_start,
+                "to_loc": m_end,
+                "distance_km": round(seg_dist, 2),
+                "duration_min": round(seg_time, 2),
+                "cost": seg_cost,
+                "line": m_line,
+                "color": self.metro.get_line_color(m_line)
+            })
+
+        # Add penalty for interchanges (5 mins per interchange)
+        interchange_penalty = (len(metro_route) - 1) * 5
+        total_m_time += interchange_penalty
+
+        # 3. Last Metro Station to Destination
         l2_dist = d_metro["distance_m"] / 1000
         l2_time = (l2_dist / 15) * 60
         l2_cost = self.cab.get_auto_estimate(l2_dist, req.time)
 
-        total_time = l1_time + m_time + l2_time + 10
-        total_cost = l1_cost + m_cost + l2_cost
-        total_dist = l1_dist + m_dist + l2_dist
+        segments.append({
+            "mode": "auto", "from_loc": d_metro["name"], "to_loc": "Destination", "distance_km": round(l2_dist, 2), "duration_min": round(l2_time, 2), "cost": l2_cost
+        })
+
+        total_time = l1_time + total_m_time + l2_time
+        total_cost = l1_cost + total_m_cost + l2_cost
+        total_dist = l1_dist + total_m_dist + l2_dist
 
         return {
             "mode": "metro",
             "time": round(total_time, 2),
             "cost": round(total_cost, 2),
             "distance_km": round(total_dist, 2),
-            "comfort": 0.6,
+            "comfort": 0.6 - (0.1 * (len(metro_route) - 1)), # lower comfort if many interchanges
             "reliability": 0.9,
             "is_multimodal": True,
-            "segments": [
-                {"mode": "auto", "from_loc": "Source", "to_loc": s_metro["name"], "distance_km": round(l1_dist, 2), "duration_min": round(l1_time, 2), "cost": l1_cost},
-                {"mode": "metro", "from_loc": s_metro["name"], "to_loc": d_metro["name"], "distance_km": round(m_dist, 2), "duration_min": round(m_time, 2), "cost": m_cost},
-                {"mode": "auto", "from_loc": d_metro["name"], "to_loc": "Destination", "distance_km": round(l2_dist, 2), "duration_min": round(l2_time, 2), "cost": l2_cost},
-            ]
+            "segments": segments
         }
 
     def _estimate_cost(self, dist_km: float, mode: str, time_obj: datetime) -> float:
