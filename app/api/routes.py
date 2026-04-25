@@ -8,7 +8,7 @@ engine = DecisionEngine()
 @router.post("/recommend", response_model=RecommendationResponse)
 async def recommend_route(request: RouteRequest):
     try:
-        recommendation = engine.get_recommendation(request)
+        recommendation = await engine.get_recommendation(request)
         return recommendation
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

@@ -31,6 +31,9 @@ class ScoringEngine:
         # Peak Hours: 8-11 AM and 5-9 PM (17-21)
         if 8 <= hour <= 11 or 17 <= hour <= 21:
             return "HIGH"
+        # Moderate Hours: 11 AM - 5 PM and 9 PM - 10 PM
+        if 11 < hour < 17 or 21 < hour <= 22:
+            return "MODERATE"
         return "NORMAL"
 
     def calculate_score(self, mode_data: Dict, traffic_level: str, is_near_metro: bool, time_obj: datetime) -> float:
@@ -87,7 +90,23 @@ class ScoringEngine:
         if mode == "metro" and is_near_metro:
             bonus += 0.2
             if traffic_level == "HIGH":
+                bonus += 0.2 # Increased bonus for peak
+            if traffic_level == "MODERATE":
                 bonus += 0.1
+
+        # Long Distance Heuristics (>15km)
+        if dist > 15.0:
+            if mode == "metro":
+                bonus += 0.3 # Metro is vastly superior for long NCR hauls
+                reliability = min(1.0, reliability + 0.1)
+            if mode == "auto":
+                penalty += 0.4 # Auto is exhausting for >15km
+            if mode == "cab":
+                penalty += 0.1 # Traffic fatigue
+                
+        # Moderate Traffic Reliability hit
+        if traffic_level == "MODERATE" and mode in ["cab", "auto", "car"]:
+            reliability *= 0.85
 
         # 3. Reliability Multiplier (Dominant factor)
         if traffic_level == "HIGH" and mode in ["cab", "auto", "car"]:
