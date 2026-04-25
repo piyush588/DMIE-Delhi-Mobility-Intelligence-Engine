@@ -15,7 +15,7 @@ jobs:
       id: health
       run: |
         # Replace with your production URL
-        URL="https://dmie-api.railway.app/api/v1/health"
+        URL="dmie.parkconscious.in"
         RESPONSE=$(curl -s -w "%{http_code}" $URL)
         HTTP_STATUS=${RESPONSE: -3}
         CONTENT=${RESPONSE:0:${#RESPONSE}-3}
