@@ -1,6 +1,6 @@
 import os
 import httpx
-from typing import Dict, Tuple, Optional
+from typing import Dict, Tuple, Optional, List
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -67,6 +67,34 @@ class RoutingService:
         except Exception as e:
             print(f"Routing error for {mode}: {e}")
             return self._mock_route(start_coords, end_coords, mode)
+
+    async def get_isochrone(self, lat: float, lng: float, minutes: int) -> Dict:
+        """
+        Fetches isochrone polygon for a given location and time limit.
+        """
+        if not self.api_key:
+            return {"error": "API key missing for isochrone"}
+
+        url = f"{self.base_url}/v2/isochrones/driving-car"
+        
+        body = {
+            "locations": [[lng, lat]],
+            "range": [minutes * 60], # ORS expects range in seconds
+            "range_type": "time"
+        }
+        headers = {
+            "Authorization": self.api_key,
+            "Content-Type": "application/json"
+        }
+
+        try:
+            client = self.get_client()
+            response = await client.post(url, json=body, headers=headers)
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
+            print(f"Isochrone error: {e}")
+            raise e
 
     def _get_profile(self, mode: str) -> str:
         mapping = {

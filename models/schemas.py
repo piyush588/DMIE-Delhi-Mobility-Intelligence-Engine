@@ -40,3 +40,8 @@ class RecommendationResponse(BaseModel):
     nearest_metro_src: Optional[MetroStation] = None
     nearest_metro_dest: Optional[MetroStation] = None
     options: List[RouteOption]
+
+class IsochroneRequest(BaseModel):
+    lat: float
+    lng: float
+    minutes: int
