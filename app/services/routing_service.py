@@ -11,7 +11,8 @@ class RoutingService:
 
     def __init__(self):
         self.api_key = os.getenv("ORS_API_KEY")
-        self.base_url = os.getenv("ORS_BASE_URL", "https://api.openrouteservice.org")
+        # Updated default URL to the new heigit.org domain as per deprecation notice
+        self.base_url = os.getenv("ORS_BASE_URL", "https://api.heigit.org")
         self._cache = {} 
         if not self.api_key:
             print("CRITICAL: No ORS_API_KEY found in environment!")
@@ -65,15 +66,11 @@ class RoutingService:
             return self._mock_route(start_coords, end_coords, mode)
 
     async def get_isochrone(self, lat: float, lng: float, minutes: int) -> Dict:
-        """
-        Fetches isochrone polygon for a given location and time limit.
-        """
         if not self.api_key:
             raise Exception("ORS_API_KEY is missing on the server")
 
         url = f"{self.base_url}/v2/isochrones/driving-car"
         
-        # Explicitly formatted body for ORS v2
         body = {
             "locations": [[float(lng), float(lat)]],
             "range": [int(minutes) * 60],
