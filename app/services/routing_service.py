@@ -1,5 +1,6 @@
 import os
 import httpx
+import json
 from typing import Dict, Tuple, Optional, List
 from dotenv import load_dotenv
 
@@ -11,28 +12,23 @@ class RoutingService:
     def __init__(self):
         self.api_key = os.getenv("ORS_API_KEY")
         self.base_url = os.getenv("ORS_BASE_URL", "https://api.openrouteservice.org")
-        self._cache = {} # Simple in-memory cache
+        self._cache = {} 
         if not self.api_key:
-            print("Warning: No ORS_API_KEY found. Running in MOCK MODE.")
+            print("CRITICAL: No ORS_API_KEY found in environment!")
 
     @classmethod
     def get_client(cls) -> httpx.AsyncClient:
         if cls._client is None or cls._client.is_closed:
             cls._client = httpx.AsyncClient(
-                timeout=10.0, 
+                timeout=15.0, 
                 limits=httpx.Limits(max_connections=50, max_keepalive_connections=20)
             )
         return cls._client
 
     async def get_route_stats(self, start_coords: Tuple[float, float], end_coords: Tuple[float, float], mode: str) -> Dict:
-        """
-        Fetches distance and duration for a given mode.
-        start_coords/end_coords are (lat, lon).
-        """
         if not self.api_key:
             return self._mock_route(start_coords, end_coords, mode)
 
-        # Cache key based on rounded coordinates
         cache_key = (round(start_coords[0], 4), round(start_coords[1], 4), 
                      round(end_coords[0], 4), round(end_coords[1], 4), mode)
         
@@ -65,7 +61,7 @@ class RoutingService:
             self._cache[cache_key] = result
             return result
         except Exception as e:
-            print(f"Routing error for {mode}: {e}")
+            print(f"Routing error: {e}")
             return self._mock_route(start_coords, end_coords, mode)
 
     async def get_isochrone(self, lat: float, lng: float, minutes: int) -> Dict:
@@ -73,27 +69,44 @@ class RoutingService:
         Fetches isochrone polygon for a given location and time limit.
         """
         if not self.api_key:
-            return {"error": "API key missing for isochrone"}
+            raise Exception("ORS_API_KEY is missing on the server")
 
         url = f"{self.base_url}/v2/isochrones/driving-car"
         
+        # Explicitly formatted body for ORS v2
         body = {
-            "locations": [[lng, lat]],
-            "range": [minutes * 60], # ORS expects range in seconds
-            "range_type": "time"
+            "locations": [[float(lng), float(lat)]],
+            "range": [int(minutes) * 60],
+            "range_type": "time",
+            "attributes": ["total_pop"],
+            "intersections": False
         }
+        
         headers = {
             "Authorization": self.api_key,
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
+            "Accept": "application/json, application/geo+json; charset=utf-8"
         }
 
         try:
             client = self.get_client()
             response = await client.post(url, json=body, headers=headers)
-            response.raise_for_status()
+            
+            if response.status_code != 200:
+                error_detail = response.text
+                try:
+                    error_detail = response.json()
+                except:
+                    pass
+                print(f"ORS API Error ({response.status_code}): {error_detail}")
+                raise Exception(f"ORS API failed with status {response.status_code}: {error_detail}")
+                
             return response.json()
+        except httpx.TimeoutException:
+            print("ORS API Timeout")
+            raise Exception("Connection to OpenRouteService timed out")
         except Exception as e:
-            print(f"Isochrone error: {e}")
+            print(f"Internal Isochrone error: {str(e)}")
             raise e
 
     def _get_profile(self, mode: str) -> str:
